@@ -571,6 +571,45 @@ describe('inject()', () => {
             done();
         });
     });
+
+    it('can receive a readable stream response', (done) => {
+
+        Date.prototype.toUTCString = function () {
+
+            return 'Thu, 08 Sep 2016 22:42:00 GMT';
+        };
+
+        const dispatch = function (req, res) {
+
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.write('hello');
+            setTimeout(() => {
+
+                res.end('world');
+            }, 100);
+        };
+
+        Shot.inject(dispatch, { method: 'get', url: '/', raw: true }, (res) => {
+
+            const socket = res.raw.socket;
+            expect(socket instanceof Stream.Readable).to.be.true();
+
+            const output = [];
+
+            socket.on('data', (data) => {
+
+                console.log(data.toString());
+                output.push(data);
+            });
+
+            socket.on('end', () => {
+
+                const buffer = Buffer.concat(output);
+                expect(buffer.toString()).to.equal(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nDate: Thu, 08 Sep 2016 22:42:00 GMT\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n5\r\nworld\r\n0\r\n\r\n`);
+                done();
+            });
+        });
+    });
 });
 
 describe('writeHead()', () => {
