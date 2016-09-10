@@ -571,6 +571,30 @@ describe('inject()', () => {
             done();
         });
     });
+
+    it('returns stream payload when output set to `stream`', (done) => {
+
+        const dispatch = function (req, res) {
+
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            internals.getTestStream().pipe(res);
+        };
+
+        Shot.inject(dispatch, { method: 'get', url: 'http://example.com:8080/hello', stream: true }, (res) => {
+
+            expect(res.payload).to.equal(res.rawPayload);
+            expect(res.payload).to.be.an.instanceof(Stream.Readable);
+            res.payload.once('data', (data) => {
+
+                expect(data.toString()).to.equal('h');
+                res.payload.once('data', (data2) => {
+
+                    expect(data2.toString()).to.equal('i');
+                    done();
+                });
+            });
+        });
+    });
 });
 
 describe('writeHead()', () => {
